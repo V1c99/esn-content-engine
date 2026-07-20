@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+.env
+node_modules/
+frontend/dist/
+
+# The CLIP weights are 600 MB, they get exported once and mounted in.
+models/*.onnx
+models/tokenizer.json
+
+# The media library itself is not mine to publish.
+media/

@@ -1,0 +1,77 @@
+[project]
+name = "esn-content-engine"
+version = "1.0.0"
+description = "Hybrid semantic and keyword search over the ESN Bucharest media library"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "uvicorn[standard]>=0.32",
+    "gunicorn>=23.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30",
+    "pgvector>=0.3.6",
+    "alembic>=1.14",
+    "onnxruntime>=1.20",
+    "numpy>=2.1",
+    "scikit-learn>=1.5",
+    "pillow>=11.0",
+    "structlog>=24.4",
+    "redis>=5.2",
+    "tokenizers>=0.20",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3", "pytest-asyncio>=0.24", "pytest-cov>=6.0",
+    "httpx>=0.28", "ruff>=0.8", "mypy>=1.13",
+    "pre-commit>=4.0", "pip-audit>=2.7",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/esn_engine"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF", "ANN", "S", "PTH", "C4"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.isort]
+# The local alembic/ directory otherwise shadows the installed package when sorting imports.
+known-third-party = ["alembic"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "ANN"]
+"alembic/*" = ["ANN", "E501"]
+"scripts/*" = ["ANN", "S603", "S607"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["onnxruntime.*", "sklearn.*", "pgvector.*", "tokenizers.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+# The test helpers are imported as `tests.helpers`, so the repository root has to be on the
+# path. `python -m pytest` adds the working directory by itself, a plain `pytest` does not,
+# and CI runs the plain one.
+pythonpath = ["."]
+addopts = "-q --cov=src/esn_engine --cov-report=term-missing --cov-fail-under=80"
+markers = [
+    "contract: pins behaviour that must never regress",
+    "needs_postgres: requires a live Postgres with pgvector",
+]
