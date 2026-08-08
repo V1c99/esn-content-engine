@@ -57,7 +57,11 @@ async def _reseed() -> None:
 
 @pytest.fixture(scope="session")
 def library() -> str:
-    """A database with the migration applied.
+    """A database with the migration applied and the test library in it.
+
+    This one is not an async fixture. A session scoped async fixture keeps a
+    connection open on the loop of the first test, and every later test then gets
+    "Event loop is closed". Doing the setup with asyncio.run in a sync fixture avoids it.
 
     The schema comes from the migration and not from create_all, because the HNSW index and
     the tag_match function only exist in the migration.
@@ -77,22 +81,12 @@ def library() -> str:
     if finished.returncode != 0:
         pytest.fail(f"alembic upgrade failed\n{finished.stdout}\n{finished.stderr}")
 
+    asyncio.run(_reseed())
     return TEST_DATABASE_URL
 
 
-@pytest_asyncio.fixture(scope="session")
-async def seeded(library):
-    """The test library, inserted once. The tests only read, so they can share it."""
-    engine = create_async_engine(library)
-    async with session_factory(engine)() as session:
-        await session.execute(text(f"TRUNCATE {TABLES} CASCADE"))
-        await session.commit()
-        await helpers.seed(session)
-    return True
-
-
 @pytest_asyncio.fixture
-async def engine(library, seeded):
+async def engine(library):
     made = create_async_engine(library, pool_pre_ping=True)
     yield made
     await made.dispose()
