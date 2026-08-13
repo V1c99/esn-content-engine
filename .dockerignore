@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+.git/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+node_modules/
+frontend/
+tests/
+docs/
+media/
+models/
+*.md
+# except this one, the Dockerfile copies it for the wheel build.
+!README.md

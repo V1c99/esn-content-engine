@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: esn
+          POSTGRES_PASSWORD: esn
+          POSTGRES_DB: esn_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U esn"
+          --health-interval 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://esn:esn@localhost:5432/esn_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      - name: Types
+        run: mypy src
+
+      # Applying the migration to an empty database is the cheapest way to catch a chain that
+      # has rotted, which is the usual way migrations break.
+      - name: Migrations
+        run: alembic upgrade head
+
+      - name: Tests
+        run: pytest
+
+      # --skip-editable leaves out this project, which is installed editable and has no release
+      # on PyPI. --strict cannot be used together with it: strict also fails on a package it
+      # skipped, so the two options contradict each other and the step never reaches the
+      # dependencies it exists to check.
+      - name: Dependency audit
+        run: pip-audit --skip-editable
+
+  docker:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false

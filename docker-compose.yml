@@ -1,0 +1,43 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: esn
+      POSTGRES_PASSWORD: esn
+      POSTGRES_DB: esn
+    volumes: [pgdata:/var/lib/postgresql/data]
+    ports: ["5433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esn"]
+      interval: 5s
+      retries: 10
+
+  cache:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://esn:esn@db:5432/esn
+      REDIS_URL: redis://cache:6379/0
+      MODELS_DIR: /models
+    ports: ["8000:8000"]
+    volumes:
+      # The CLIP weights are 600 MB, so they are mounted rather than copied into the image.
+      # Only the text encoder is needed to serve a query.
+      - "./models:/models:ro"
+    depends_on:
+      db: {condition: service_healthy}
+      cache: {condition: service_healthy}
+
+  dashboard:
+    build: ./frontend
+    ports: ["5173:80"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
