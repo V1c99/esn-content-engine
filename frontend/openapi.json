@@ -1,0 +1,678 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ESN Content Engine",
+    "summary": "Hybrid semantic and keyword search over the ESN Bucharest media library",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Only says the process is up.\n\nThe container healthcheck calls this. If it also checked Postgres then a database restart\nwould make Docker kill an API that was working fine.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "summary": "Search",
+        "description": "One search. There is no second endpoint for briefs, see docs/adr/0004.",
+        "operationId": "search_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/media/{media_id}": {
+      "get": {
+        "summary": "Read Media",
+        "operationId": "read_media_media__media_id__get",
+        "parameters": [
+          {
+            "name": "media_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Media Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/probes": {
+      "get": {
+        "summary": "List Probes",
+        "description": "The 23 probes with the accuracy each one was measured at.",
+        "operationId": "list_probes_probes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProbeOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Probes Probes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/suggest": {
+      "get": {
+        "summary": "Suggest",
+        "description": "Type-ahead over the tag vocabulary. Prefix matches first, then anything containing it.",
+        "operationId": "suggest_suggest_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Suggest Suggest Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HitOut": {
+        "properties": {
+          "media": {
+            "$ref": "#/components/schemas/MediaOut"
+          },
+          "timestamp_s": {
+            "type": "number",
+            "title": "Timestamp S"
+          },
+          "rrf_score": {
+            "type": "number",
+            "title": "Rrf Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media",
+          "timestamp_s",
+          "rrf_score"
+        ],
+        "title": "HitOut"
+      },
+      "Interpretation": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "searched_for": {
+            "type": "string",
+            "title": "Searched For"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "excluded_concepts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Excluded Concepts"
+          },
+          "applied_rules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Applied Rules"
+          },
+          "safety_floor": {
+            "type": "boolean",
+            "title": "Safety Floor"
+          },
+          "dropped_words": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dropped Words"
+          }
+        },
+        "type": "object",
+        "required": [
+          "query",
+          "searched_for",
+          "kind",
+          "excluded_concepts",
+          "applied_rules",
+          "safety_floor",
+          "dropped_words"
+        ],
+        "title": "Interpretation",
+        "description": "What the engine understood, so a wrong guess is visible instead of mysterious."
+      },
+      "MediaDetail": {
+        "properties": {
+          "media": {
+            "$ref": "#/components/schemas/MediaOut"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "indoor_outdoor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indoor Outdoor"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day"
+          },
+          "people_count": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "People Count"
+          },
+          "emotion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emotion"
+          },
+          "uses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Uses"
+          },
+          "avoid": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Avoid"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagOut"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "probes": {
+            "items": {
+              "$ref": "#/components/schemas/ProbeScoreOut"
+            },
+            "type": "array",
+            "title": "Probes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "media",
+          "description",
+          "indoor_outdoor",
+          "time_of_day",
+          "people_count",
+          "emotion",
+          "uses",
+          "avoid",
+          "tags",
+          "probes"
+        ],
+        "title": "MediaDetail"
+      },
+      "MediaOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "shot_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shot At"
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          },
+          "activity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity"
+          },
+          "alcohol_visible": {
+            "type": "boolean",
+            "title": "Alcohol Visible"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "event",
+          "kind",
+          "width",
+          "height",
+          "duration_s",
+          "shot_at",
+          "place",
+          "activity",
+          "alcohol_visible"
+        ],
+        "title": "MediaOut"
+      },
+      "ProbeOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "roc_auc": {
+            "type": "number",
+            "title": "Roc Auc"
+          },
+          "average_precision": {
+            "type": "number",
+            "title": "Average Precision"
+          },
+          "n_positive": {
+            "type": "integer",
+            "title": "N Positive"
+          },
+          "weak": {
+            "type": "boolean",
+            "title": "Weak"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "roc_auc",
+          "average_precision",
+          "n_positive",
+          "weak"
+        ],
+        "title": "ProbeOut"
+      },
+      "ProbeScoreOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "p": {
+            "type": "number",
+            "title": "P"
+          },
+          "roc_auc": {
+            "type": "number",
+            "title": "Roc Auc"
+          },
+          "weak": {
+            "type": "boolean",
+            "title": "Weak"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "p",
+          "roc_auc",
+          "weak"
+        ],
+        "title": "ProbeScoreOut"
+      },
+      "SearchRequest": {
+        "properties": {
+          "q": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Q"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 200.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "q"
+        ],
+        "title": "SearchRequest"
+      },
+      "SearchResponse": {
+        "properties": {
+          "interpretation": {
+            "$ref": "#/components/schemas/Interpretation"
+          },
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/HitOut"
+            },
+            "type": "array",
+            "title": "Hits"
+          },
+          "took_ms": {
+            "type": "integer",
+            "title": "Took Ms"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "interpretation",
+          "hits",
+          "took_ms"
+        ],
+        "title": "SearchResponse"
+      },
+      "TagOut": {
+        "properties": {
+          "term": {
+            "type": "string",
+            "title": "Term"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          }
+        },
+        "type": "object",
+        "required": [
+          "term",
+          "source",
+          "weight"
+        ],
+        "title": "TagOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
