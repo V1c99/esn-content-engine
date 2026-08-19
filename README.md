@@ -69,6 +69,10 @@ Postgres with pgvector, Redis, the API on `http://localhost:8000` with generated
 
 ![The endpoints the API serves](docs/images/api.png)
 
+Redis caches the whole search response for five minutes, which takes a repeat of the same
+query from 167.6 ms to 7.3 ms. It is optional: without `REDIS_URL` the search just runs
+every time, and if Redis goes down the request still gets answered.
+
 The CLIP weights are not in the repository. Only the text encoder is needed to search, so put
 `clip_text.onnx` (254 MB) and `tokenizer.json` in `models/` before starting, and the compose
 file mounts them read only.
@@ -98,7 +102,9 @@ Every number below came out of a query against the loaded database.
 |---|---|
 | HNSW recall against an exhaustive scan, 200 queries at k=40 | mean 0.9958, worst 0.950, 170/200 identical |
 | Same query, HNSW against exhaustive | 3.3 ms against 18.3 ms, median |
-| Search end to end, warm | 23 ms to 40 ms |
+| Search through the API, cache miss | 167.6 ms median |
+| The same search again, served from Redis | 7.3 ms median |
+| Search in process, no HTTP and no cache | 23 ms to 40 ms |
 | Query text to 512 numbers | 21.8 ms median |
 | Bar and club items reaching the top 40 of five "no alcohol" briefs | 81 with the visible-alcohol label alone, 0 with the venue rule |
 
