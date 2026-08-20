@@ -6,7 +6,8 @@ Search over the photos and videos ESN Bucharest shot during one semester, so tha
 footage for an Instagram reel does not mean scrolling through 2,334 files. Semantic search,
 keyword search and tag search run together in one SQL query and are combined by rank.
 
-I built it because I run the media for the association and I was losing hours to it.
+I built it because I run the media for the association and I was losing hours to it. It is
+installed on the communications team's machines now and other volunteers use it too.
 
 ![A search that excludes alcohol](docs/images/search.png)
 
